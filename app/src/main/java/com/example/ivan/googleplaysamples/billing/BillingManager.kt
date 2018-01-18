@@ -12,7 +12,7 @@ import java.util.*
  * Handles all the interactions with Play Store (via Billing library), maintains connection to
  * it through BillingClient and caches temporary states/data if needed
  */
-class BillingManager(val activity: Activity, private val billingUpdatesListener: BillingUpdatesListener) : PurchasesUpdatedListener {
+class BillingManager(private val activity: Activity, private val billingUpdatesListener: BillingUpdatesListener) : PurchasesUpdatedListener {
 
     private var billingClient: BillingClient? = null
     private var mIsServiceConnected: Boolean = false
@@ -25,9 +25,6 @@ class BillingManager(val activity: Activity, private val billingUpdatesListener:
      */
     var billingClientResponseCode = BILLING_MANAGER_NOT_INITIALIZED
         private set
-
-
-
     /**
      * Listener to the updates that happen when purchases list was updated or consumption of the
      * item was finished
@@ -90,8 +87,7 @@ class BillingManager(val activity: Activity, private val billingUpdatesListener:
                              @SkuType billingType: String) {
         val purchaseFlowRequest = Runnable {
             Log.d(TAG, "Launching in-app purchase flow. Replace old SKU? " + (oldSkus != null))
-            val purchaseParams = BillingFlowParams.newBuilder()
-                    .setSku(skuId).setType(billingType).setOldSkus(oldSkus).build()
+            val purchaseParams = BillingFlowParams.newBuilder().setSku(skuId).setType(billingType).setOldSkus(oldSkus).build()
             billingClient!!.launchBillingFlow(activity, purchaseParams)
         }
 
@@ -109,29 +105,25 @@ class BillingManager(val activity: Activity, private val billingUpdatesListener:
     fun querySkuDetailsAsync(@SkuType itemType: String, skuList: List<String>,
                              listener: SkuDetailsResponseListener) {
         // Creating a runnable from the request to use it inside our connection retry policy below
-        val queryRequest = Runnable {
+        executeServiceRequest(Runnable {
             // Query the purchase async
             val params = SkuDetailsParams.newBuilder()
             params.setSkusList(skuList).setType(itemType)
-            billingClient!!.querySkuDetailsAsync(params.build()
-            ) { responseCode, skuDetailsList -> listener.onSkuDetailsResponse(responseCode, skuDetailsList) }
-        }
-
-        executeServiceRequest(queryRequest)
+            billingClient!!.querySkuDetailsAsync(params.build())
+            { responseCode, skuDetailsList -> listener.onSkuDetailsResponse(responseCode, skuDetailsList) }
+        })
     }
 
     fun consumeAsync(purchaseToken: String) {
         // If we've already scheduled to consume this token - no action is needed (this could happen
         // if you received the token when querying purchases inside onReceive() and later from
         // onActivityResult()
-        if (tokensToBeConsumed == null) {
-            tokensToBeConsumed = HashSet()
-        } else if (tokensToBeConsumed!!.contains(purchaseToken)) {
+        if (tokensToBeConsumed == null)  tokensToBeConsumed = HashSet()
+        else if (tokensToBeConsumed!!.contains(purchaseToken)) {
             Log.i(TAG, "Token was already scheduled to be consumed - skipping...")
             return
         }
         tokensToBeConsumed!!.add(purchaseToken)
-
         // Generating Consume Response listener
         val onConsumeListener = ConsumeResponseListener { responseCode, purchaseToken ->
             // If billing service was disconnected, we try to reconnect 1 time
@@ -161,9 +153,7 @@ class BillingManager(val activity: Activity, private val billingUpdatesListener:
             Log.i(TAG, "Got a purchase: $purchase; but signature is bad. Skipping...")
             return
         }
-
         Log.d(TAG, "Got a verified purchase: " + purchase)
-
         purchases.add(purchase)
     }
 
@@ -173,8 +163,7 @@ class BillingManager(val activity: Activity, private val billingUpdatesListener:
     private fun onQueryPurchasesFinished(result: PurchasesResult) {
         // Have we been disposed of in the meantime? If so, or bad result code, then quit
         if (billingClient == null || result.responseCode != BillingResponse.OK) {
-            Log.w(TAG, "Billing client was null or result code (" + result.responseCode
-                    + ") was bad - quitting")
+            Log.w(TAG, "Billing client was null or result code (${result.responseCode}) was bad - quitting")
             return
         }
 
@@ -196,7 +185,7 @@ class BillingManager(val activity: Activity, private val billingUpdatesListener:
     fun areSubscriptionsSupported(): Boolean {
         val responseCode = billingClient!!.isFeatureSupported(FeatureType.SUBSCRIPTIONS)
         if (responseCode != BillingResponse.OK) {
-            Log.w(TAG, "areSubscriptionsSupported() got an error response: " + responseCode)
+            Log.w(TAG, "areSubscriptionsSupported() got an error response: $responseCode")
         }
         return responseCode == BillingResponse.OK
     }
@@ -209,16 +198,12 @@ class BillingManager(val activity: Activity, private val billingUpdatesListener:
         val queryToExecute = Runnable {
             val time = System.currentTimeMillis()
             val purchasesResult = billingClient!!.queryPurchases(SkuType.INAPP)
-            Log.i(TAG, "Querying purchases elapsed time: " + (System.currentTimeMillis() - time)
-                    + "ms")
+            Log.i(TAG, "Querying purchases elapsed time: ${System.currentTimeMillis() - time}ms")
             // If there are subscriptions supported, we add subscription rows as well
             if (areSubscriptionsSupported()) {
                 val subscriptionResult = billingClient!!.queryPurchases(SkuType.SUBS)
-                Log.i(TAG, "Querying purchases and subscriptions elapsed time: "
-                        + (System.currentTimeMillis() - time) + "ms")
-                Log.i(TAG, "Querying subscriptions result code: "
-                        + subscriptionResult.responseCode
-                        + " res: " + subscriptionResult.purchasesList.size)
+                Log.i(TAG, """Querying purchases and subscriptions elapsed time: ${System.currentTimeMillis() - time}ms""")
+                Log.i(TAG, "Querying subscriptions result code: ${subscriptionResult.responseCode} res: ${subscriptionResult.purchasesList.size}")
 
                 if (subscriptionResult.responseCode == BillingResponse.OK) {
                     purchasesResult.purchasesList.addAll(
@@ -240,7 +225,7 @@ class BillingManager(val activity: Activity, private val billingUpdatesListener:
     fun startServiceConnection(executeOnSuccess: Runnable?) {
         billingClient!!.startConnection(object : BillingClientStateListener {
             override fun onBillingSetupFinished(@BillingResponse billingResponseCode: Int) {
-                Log.d(TAG, "Setup finished. Response code: " + billingResponseCode)
+                Log.d(TAG, "Setup finished. Response code: $billingResponseCode")
 
                 if (billingResponseCode == BillingResponse.OK) {
                     mIsServiceConnected = true
@@ -276,23 +261,22 @@ class BillingManager(val activity: Activity, private val billingUpdatesListener:
         // Some sanity checks to see if the developer (that's you!) really followed the
         // instructions to run this sample (don't put these checks on your app!)
         if (BASE_64_ENCODED_PUBLIC_KEY.contains("CONSTRUCT_YOUR")) {
-            throw RuntimeException("Please update your app's public key at: " + "BASE_64_ENCODED_PUBLIC_KEY")
+            throw RuntimeException("""Please update your app's public key at: BASE_64_ENCODED_PUBLIC_KEY""")
         }
-
-        try {
-            return Security.verifyPurchase(BASE_64_ENCODED_PUBLIC_KEY, signedData, signature)
+        return try {
+            Security.verifyPurchase(BASE_64_ENCODED_PUBLIC_KEY, signedData, signature)
         } catch (e: IOException) {
             Log.e(TAG, "Got an exception trying to validate a purchase: " + e)
-            return false
+            false
         }
 
     }
 
     companion object {
         // Default value of mBillingClientResponseCode until BillingManager was not yeat initialized
-        val BILLING_MANAGER_NOT_INITIALIZED = -1
+        const val BILLING_MANAGER_NOT_INITIALIZED = -1
 
-        private val TAG = "BillingManager"
+        private const val TAG = "BillingManager"
 
         /* BASE_64_ENCODED_PUBLIC_KEY should be YOUR APPLICATION'S PUBLIC KEY
      * (that you got from the Google Play developer console). This is not your
@@ -305,6 +289,6 @@ class BillingManager(val activity: Activity, private val billingUpdatesListener:
      * want to make it easy for an attacker to replace the public key with one
      * of their own and then fake messages from the server.
      */
-        private val BASE_64_ENCODED_PUBLIC_KEY = "CONSTRUCT_YOUR_KEY_AND_PLACE_IT_HERE"
+        private const val BASE_64_ENCODED_PUBLIC_KEY = "CONSTRUCT_YOUR_KEY_AND_PLACE_IT_HERE"
     }
 }
