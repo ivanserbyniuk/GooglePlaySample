@@ -14,15 +14,13 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 -->
-<resources>
-    <color name="primary_color">#37474F</color>
-    <color name="primary_color_dark">#263238</color>
-    <color name="ascent_color">#4285F4</color>
-
-    <color name="list_bg_color">#eeeeee</color>
-    <color name="row_header_bg_color">#ffffff</color>
-    <color name="row_bg_color">#ffffff</color>
-
-    <color name="disabled_color">#90b1b0</color>
-    <color name="gold">#ffbf00</color>
-</resources>
+<ProgressBar
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@id/screen_wait"
+    style="?android:attr/progressBarStyle"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_gravity="center"
+    android:contentDescription="@string/content_description_app_loading_image"
+    android:indeterminate="true"
+    android:visibility="gone"/>

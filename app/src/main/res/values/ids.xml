@@ -15,14 +15,10 @@
    limitations under the License.
 -->
 <resources>
-    <color name="primary_color">#37474F</color>
-    <color name="primary_color_dark">#263238</color>
-    <color name="ascent_color">#4285F4</color>
-
-    <color name="list_bg_color">#eeeeee</color>
-    <color name="row_header_bg_color">#ffffff</color>
-    <color name="row_bg_color">#ffffff</color>
-
-    <color name="disabled_color">#90b1b0</color>
-    <color name="gold">#ffbf00</color>
+    <item name="screen_wait" type="id" />
+    <item name="screen_main" type="id" />
+    <item name="free_or_premium" type="id" />
+    <item name="gas_gauge" type="id" />
+    <item name="button_purchase" type="id" />
+    <item name="button_drive" type="id" />
 </resources>
