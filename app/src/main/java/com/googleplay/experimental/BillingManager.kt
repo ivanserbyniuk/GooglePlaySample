@@ -1,4 +1,4 @@
-package com.googleplay.ivan.googleplay.billing
+package com.googleplay.experimental
 
 import android.app.Activity
 import android.util.Log
